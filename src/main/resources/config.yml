@@ -1,0 +1,12 @@
+database:
+  host: localhost
+  name: maxplayercounter
+  user: maxplayercounter
+  password: maxplayercounter
+  verifyServerCertificate: false
+  useSSL: true
+  # Send keep alive every n seconds
+  keepAlive: 300
+
+# Keep until n months
+keepUntil: 3
