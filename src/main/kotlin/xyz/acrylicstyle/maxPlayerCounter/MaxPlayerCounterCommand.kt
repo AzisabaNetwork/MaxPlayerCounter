@@ -92,7 +92,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                         timestamps.forEach { ts ->
                             var total = 0
                             theServers.forEach { (_, list) ->
-                                total += list.find { it.first == ts }?.second ?: 0
+                                total += list.filter { (time) -> time <= ts }.maxByOrNull { it.first }?.second ?: 0
                             }
                             if (bestPC < total) {
                                 bestTS = ts
@@ -102,17 +102,9 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                         sender.send("${ChatColor.DARK_GRAY}[${ChatColor.GREEN}G${ChatColor.DARK_GRAY}] ${ChatColor.GOLD}${groupName}${ChatColor.GREEN}: ${ChatColor.YELLOW}${bestPC}人 @ ${Util.formatDateTime(bestTS)}")
                     }
                     serversNotInGroup.forEach { (serverName, list) ->
-                        var bestTS = 0L
-                        var bestPC = 0
-                        list.map { it.first }.forEach { ts ->
-                            list.filter { it.first == ts }.forEach { pair ->
-                                if (bestPC < pair.second) {
-                                    bestTS = pair.first
-                                    bestPC = pair.second
-                                }
-                            }
-                        }
-                        sender.send("${ChatColor.DARK_GRAY}[${ChatColor.AQUA}S${ChatColor.DARK_GRAY}] ${ChatColor.GOLD}${serverName}${ChatColor.GREEN}: ${ChatColor.YELLOW}${bestPC}人 @ ${Util.formatDateTime(bestTS)}")
+                        if (list.isEmpty()) return@forEach
+                        val p = list.maxByOrNull { pair -> pair.second }!!
+                        sender.send("${ChatColor.DARK_GRAY}[${ChatColor.AQUA}S${ChatColor.DARK_GRAY}] ${ChatColor.GOLD}${serverName}${ChatColor.GREEN}: ${ChatColor.YELLOW}${p.second}人 @ ${Util.formatDateTime(p.first)}")
                     }
                     s.close()
                     resolve(null)
@@ -147,7 +139,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                             s.close()
                             return@then list
                         }
-                        val group = it.getString("group")
+                        val group = it.getString("id")
                         val servers = MaxPlayerCounter.getPlugin().connection.getServersByGroup(group).complete().map { server -> server.name }
                         if (servers.isEmpty()) return@then emptyList<Pair<Long, Int>>()
                         var a = ""
@@ -162,21 +154,24 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                             s.setString(index + 3, server)
                         }
                         val result = s.executeQuery()
-                        val map = mutableMapOf<String, Pair<Long, Int>>()
+                        val map = mutableMapOf<String, MutableList<Pair<Long, Int>>>()
                         while (result.next()) {
                             val server = result.getString("server")
                             val first = result.getLong("timestamp")
                             val second = result.getInt("playerCount")
-                            map[server] = first to second
+                            map.getOrPut(server) { mutableListOf() }.add(first to second)
                         }
+                        val timestamps = map.values.flatMap { l -> l.map { p -> p.first } }.distinct()
                         var epicTS = 0L
                         var epicPC = 0
-                        map.values.map { p -> p.first }.forEach { ts ->
-                            map.filterValues { p -> p.first == ts }.values.forEach { pair ->
-                                if (epicPC < pair.second) {
-                                    epicTS = pair.first
-                                    epicPC = pair.second
-                                }
+                        timestamps.forEach { ts ->
+                            var total = 0
+                            map.keys.forEach { server ->
+                                total += map[server]!!.filter { (time) -> time <= ts }.maxByOrNull { p -> p.first }?.second ?: 0
+                            }
+                            if (epicPC < total) {
+                                epicTS = ts
+                                epicPC = total
                             }
                         }
                         s.close()

@@ -28,7 +28,8 @@ import xyz.acrylicstyle.sql.options.InsertOptions
 import java.util.Properties
 
 class SQLConnection(host: String, name: String, user: String, password: String): Sequelize(host, name, user, password) {
-    lateinit var players: Table
+    private val playerCountCache = mutableMapOf<String, Int>()
+    private lateinit var players: Table
     lateinit var groups: Table
     lateinit var serverGroup: Table
 
@@ -63,20 +64,47 @@ class SQLConnection(host: String, name: String, user: String, password: String):
 
     private var lastUpdated = 0
 
-    fun updatePlayerCount(): Promise<Unit> = Promise.create {
+    fun updatePlayerCount(): Promise<Unit> = Promise.create { context ->
         if (isConnected() && System.currentTimeMillis() - lastUpdated > 950) {
             val ts = System.currentTimeMillis()
-            Promise.allUntyped(*ProxyServer.getInstance().servers.values.map { server ->
-                players.insert(
-                    InsertOptions.Builder()
-                        .addValue("server", server.name)
-                        .addValue("timestamp", ts)
-                        .addValue("playerCount", server.players.size)
-                        .build()
+            if (playerCountCache.isEmpty()) {
+                Promise.allUntyped(*ProxyServer.getInstance().servers.values.map { server ->
+                    players.insert(
+                        InsertOptions.Builder()
+                            .addValue("server", server.name)
+                            .addValue("timestamp", ts)
+                            .addValue("playerCount", server.players.size)
+                            .build()
+                    )
+                }.toTypedArray())
+            } else {
+                Promise.allUntyped(
+                    *getModifiedKeysFromMap(
+                        playerCountCache,
+                        ProxyServer.getInstance().servers.mapValues { it.value.players.size },
+                    ).map { n ->
+                        players.insert(
+                            InsertOptions.Builder()
+                                .addValue("server", n)
+                                .addValue("timestamp", ts)
+                                .addValue("playerCount", ProxyServer.getInstance().getServerInfo(n)?.players?.size ?: 0)
+                                .build()
+                        )
+                    }.toTypedArray()
                 )
-            }.toTypedArray())
+            }
+            playerCountCache.clear()
+            playerCountCache.putAll(ProxyServer.getInstance().servers.mapValues { it.value.players.size })
         }
-        it.resolve()
+        context.resolve()
+    }
+
+    private fun <K, V> getModifiedKeysFromMap(map: Map<K, V>, map2: Map<K, V>): List<K> {
+        val list = mutableListOf<K>()
+        map.forEach { (key, value) ->
+            if (map2[key] != value) list.add(key)
+        }
+        return list
     }
 
     fun getServersByGroup(groupId: String): Promise<List<ServerInfo>> =
@@ -93,10 +121,6 @@ class SQLConnection(host: String, name: String, user: String, password: String):
             }
             return@then map
         }
-
-    fun getGroupByServer(server: String): Promise<String?> =
-        serverGroup.findOne(FindOptions.Builder().addWhere("server", server).setLimit(1).build())
-            .then { it?.getString("group") }
 
     fun getAllGroups(): Promise<List<String>> =
         groups.findAll(FindOptions.ALL).then { it.map { td -> td.getString("id") } }

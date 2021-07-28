@@ -31,14 +31,20 @@ object Util {
         return cal.formatDateTime()
     }
 
+    private fun zero(length: Int, any: Any): String {
+        val s = any.toString()
+        if (s.length >= length) return s
+        return "0".repeat(length - s.length) + s
+    }
+
     fun Calendar.formatDateTime(): String {
-        val year = this[Calendar.YEAR]
-        val month = this[Calendar.MONTH] + 1
-        val day = this[Calendar.DAY_OF_MONTH]
-        val hour = this[Calendar.HOUR_OF_DAY]
-        val minute = this[Calendar.MINUTE]
-        val second = this[Calendar.SECOND]
-        val millisecond = this[Calendar.MILLISECOND]
+        val year = zero(4, this[Calendar.YEAR])
+        val month = zero(2, this[Calendar.MONTH] + 1)
+        val day = zero(2, this[Calendar.DAY_OF_MONTH])
+        val hour = zero(2, this[Calendar.HOUR_OF_DAY])
+        val minute = zero(2, this[Calendar.MINUTE])
+        val second = zero(2, this[Calendar.SECOND])
+        val millisecond = zero(3, this[Calendar.MILLISECOND])
         return "$year/$month/$day $hour:$minute:$second.$millisecond"
     }
 
