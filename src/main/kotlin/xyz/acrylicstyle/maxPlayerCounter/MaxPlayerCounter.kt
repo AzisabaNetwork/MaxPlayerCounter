@@ -80,7 +80,7 @@ class MaxPlayerCounter: Plugin() {
         timer.schedule(object: TimerTask() {
             override fun run() {
                 val c = Calendar.getInstance()
-                var newMonth = c[Calendar.MONTH] - 4
+                var newMonth = c[Calendar.MONTH] - 1 - MaxPlayerCounterConfig.keepUntil
                 if (newMonth < 0) {
                     c.set(Calendar.YEAR, c[Calendar.YEAR] - 1)
                     newMonth += 12

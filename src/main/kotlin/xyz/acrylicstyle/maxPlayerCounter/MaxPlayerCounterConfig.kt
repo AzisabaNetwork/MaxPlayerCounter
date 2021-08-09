@@ -30,6 +30,8 @@ object MaxPlayerCounterConfig {
         cfg = YamlConfiguration(file).asObject()
     }
 
+    val keepUntil = cfg.getInt("keepUntil")
+
     val database = DatabaseSettings(cfg.getObject("database"))
 
     class DatabaseSettings internal constructor(obj: YamlObject) {
