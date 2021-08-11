@@ -39,7 +39,7 @@ import kotlin.math.min
 
 object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.command.maxplayercounter", "mpc"), TabExecutor {
     private val commands = listOf("list", "show", "creategroup", "deletegroup", "group", "g")
-    private val groupCommands = listOf("add", "remove")
+    private val groupCommands = listOf("add", "remove", "info")
     private val list12 = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12).map { it.toString() }
     private var cachedGroups = DataCache<List<String>>()
     @Volatile
@@ -54,6 +54,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
         send("${ChatColor.AQUA}/mpc deletegroup <グループ名> ${ChatColor.GRAY}- ${ChatColor.GREEN}グループを削除")
         send("${ChatColor.AQUA}/mpc group <グループ名> add <鯖名> ${ChatColor.GRAY}- ${ChatColor.GREEN}指定した鯖をグループに追加")
         send("${ChatColor.AQUA}/mpc group <グループ名> remove <鯖名> ${ChatColor.GRAY}- ${ChatColor.GREEN}指定した鯖をグループから除外")
+        send("${ChatColor.AQUA}/mpc group <グループ名> info ${ChatColor.GRAY}- ${ChatColor.GREEN}グループに所属しているサーバーを表示")
         send("${ChatColor.YELLOW}----------------------------------------")
     }
 
@@ -233,7 +234,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                     }
             }
             "g", "group" -> {
-                if (args.size <= 3 || !groupCommands.contains(args[2])) return sender.sendHelp()
+                if (args.size <= 2 || !groupCommands.contains(args[2])) return sender.sendHelp()
                 val groupName = args[1]
                 if (!groupName.matches(MaxPlayerCounter.GROUP_PATTERN)) {
                     return sender.send("${ChatColor.RED}無効なグループ名です。")
@@ -241,12 +242,14 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                 MaxPlayerCounter.getPlugin().connection.getAllGroups()
                     .then { list ->
                         if (!list.any { it == groupName }) {
-                            sender.send("${ChatColor.RED}無効なグループ名です。")
-                            throw Exception()
+                            return@then sender.send("${ChatColor.RED}無効なグループ名です。")
                         }
-                        if (!ProxyServer.getInstance().servers.map { it.value.name }.any { it == args[3] }) {
-                            sender.send("${ChatColor.RED}無効なサーバー名です。")
-                            throw Exception()
+                        if (args[2] == "add" || args[2] == "remove") {
+                            if (args.size < 3) {
+                                return@then sender.sendHelp()
+                            } else if (!ProxyServer.getInstance().servers.map { it.value.name }.any { it == args[3] }) {
+                                return@then sender.send("${ChatColor.RED}無効なサーバー名です。")
+                            }
                         }
                         when (args[2]) {
                             "add" -> {
@@ -270,9 +273,17 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                                 ).complete()
                                 sender.send("${ChatColor.GREEN}グループからサーバーを(そのグループに入っている場合は)除外しました。")
                             }
+                            "info" -> {
+                                val servers = MaxPlayerCounter.getPlugin().connection.getServersByGroup(args[1]).complete()
+                                sender.send("${ChatColor.AQUA}グループ: ${ChatColor.RESET}$groupName")
+                                sender.send("- ${ChatColor.AQUA}サーバー:")
+                                servers.forEach { server ->
+                                    sender.send("   - ${ChatColor.GREEN}${server.name}")
+                                }
+                            }
                             else -> sender.sendHelp()
                         }
-                    }.catch {}
+                    }
             }
             else -> sender.sendHelp()
         }
@@ -296,7 +307,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
         if (args[0] == "group" || args[0] == "g") {
             if (args.size == 2) getGroups()?.let { return it.filter(args[1]) }
             if (args.size == 3) return groupCommands.filter(args[2])
-            if (args.size == 4) return ProxyServer.getInstance().servers.values.map { it.name }.filter(args[3])
+            if (args.size == 4 && (args[2] == "add" || args[2] == "remove")) return ProxyServer.getInstance().servers.values.map { it.name }.filter(args[3])
         }
         return emptyList()
     }
