@@ -307,7 +307,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
             if (!updatingCache) {
                 updatingCache = true
                 MaxPlayerCounter.getPlugin().connection.getAllGroups().then {
-                    cachedGroups = DataCache(groups, System.currentTimeMillis() + 1000 * 60)
+                    cachedGroups = DataCache(it, System.currentTimeMillis() + 1000 * 60)
                     updatingCache = false
                 }
             }
