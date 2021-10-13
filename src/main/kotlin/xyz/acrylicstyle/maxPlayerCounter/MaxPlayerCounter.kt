@@ -34,10 +34,11 @@ class MaxPlayerCounter: Plugin() {
     companion object {
         val GROUP_PATTERN = "^[a-zA-Z0-9+_\\-]{1,32}$".toRegex()
 
-        @JvmStatic
-        fun getPlugin() =
-            (ProxyServer.getInstance().pluginManager.getPlugin("MaxPlayerCounter")
-                ?: error("MaxPlayerCounter plugin not loaded")) as MaxPlayerCounter
+        lateinit var instance: MaxPlayerCounter
+    }
+
+    init {
+        instance = this
     }
 
     private val timer = Timer()

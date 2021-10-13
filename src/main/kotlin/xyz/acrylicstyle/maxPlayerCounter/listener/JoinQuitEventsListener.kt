@@ -27,15 +27,15 @@ import java.util.concurrent.TimeUnit
 object JoinQuitEventsListener: Listener {
     @EventHandler
     fun onServerConnected(e: ServerConnectedEvent) {
-        ProxyServer.getInstance().scheduler.schedule(MaxPlayerCounter.getPlugin(), {
-            MaxPlayerCounter.getPlugin().connection.updatePlayerCount()
+        ProxyServer.getInstance().scheduler.schedule(MaxPlayerCounter.instance, {
+            MaxPlayerCounter.instance.connection.updatePlayerCount()
         }, 10, TimeUnit.MILLISECONDS)
     }
 
     @EventHandler
     fun onQuit(e: PlayerDisconnectEvent) {
-        ProxyServer.getInstance().scheduler.schedule(MaxPlayerCounter.getPlugin(), {
-            MaxPlayerCounter.getPlugin().connection.updatePlayerCount()
+        ProxyServer.getInstance().scheduler.schedule(MaxPlayerCounter.instance, {
+            MaxPlayerCounter.instance.connection.updatePlayerCount()
         }, 10, TimeUnit.MILLISECONDS)
     }
 }

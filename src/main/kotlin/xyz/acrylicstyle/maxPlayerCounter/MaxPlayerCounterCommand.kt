@@ -72,7 +72,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                 cal.convertMonth(m)
                 val pair = cal.getBeginAndEndOfMonth()
                 Promise.create<Unit>("MaxPlayerCounter Thread Pool #%d") { (resolve, _) ->
-                    val s = MaxPlayerCounter.getPlugin().connection.connection.prepareStatement("SELECT * FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ?")
+                    val s = MaxPlayerCounter.instance.connection.connection.prepareStatement("SELECT * FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ?")
                     s.setLong(1, pair.first)
                     s.setLong(2, pair.second)
                     val result = s.executeQuery()
@@ -83,7 +83,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                         val second = result.getInt("playerCount")
                         (map.getOrPut(server) { mutableListOf() }).add(first to second)
                     }
-                    val groups = MaxPlayerCounter.getPlugin().connection.getAllServerGroups().complete()
+                    val groups = MaxPlayerCounter.instance.connection.getAllServerGroups().complete()
                     val serversNotInGroup = if (groups.isEmpty()) map else map.filterKeys { groups.values.all { l -> !l.contains(it) } }
                     groups.forEach { (groupName, servers) ->
                         val theServers = servers.map { it to map[it]!! }
@@ -122,11 +122,11 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                 val cal = Calendar.getInstance()
                 cal.convertMonth(m)
                 val pair = cal.getBeginAndEndOfMonth()
-                MaxPlayerCounter.getPlugin().connection.groups.findOne(FindOptions.Builder().addWhere("id", args[1]).setLimit(1).build())
+                MaxPlayerCounter.instance.connection.groups.findOne(FindOptions.Builder().addWhere("id", args[1]).setLimit(1).build())
                     .then {
                         if (it == null) {
                             val server = ProxyServer.getInstance().servers.values.find { info -> info.name.equals(args[1]) }?.name ?: throw Exception()
-                            val s = MaxPlayerCounter.getPlugin().connection.connection.prepareStatement("SELECT `timestamp`, `playerCount` FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ? AND `server` = ?")
+                            val s = MaxPlayerCounter.instance.connection.connection.prepareStatement("SELECT `timestamp`, `playerCount` FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ? AND `server` = ?")
                             s.setLong(1, pair.first)
                             s.setLong(2, pair.second)
                             s.setString(3, server)
@@ -141,14 +141,14 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                             return@then list
                         }
                         val group = it.getString("id")
-                        val servers = MaxPlayerCounter.getPlugin().connection.getServersByGroup(group).complete().map { server -> server.name }
+                        val servers = MaxPlayerCounter.instance.connection.getServersByGroup(group).complete().map { server -> server.name }
                         if (servers.isEmpty()) return@then emptyList<Pair<Long, Int>>()
                         var a = ""
                         servers.forEach { _ ->
                             if (a != "") a += " OR "
                             a += "`server` = ?"
                         }
-                        val s = MaxPlayerCounter.getPlugin().connection.connection.prepareStatement("SELECT * FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ? AND ($a)")
+                        val s = MaxPlayerCounter.instance.connection.connection.prepareStatement("SELECT * FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ? AND ($a)")
                         s.setLong(1, pair.first)
                         s.setLong(2, pair.second)
                         servers.forEachIndexed { index, server ->
@@ -196,14 +196,14 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                 if (!groupName.matches(MaxPlayerCounter.GROUP_PATTERN)) {
                     return sender.send("${ChatColor.RED}この名前は使用できません。")
                 }
-                MaxPlayerCounter.getPlugin().connection.getAllGroups()
+                MaxPlayerCounter.instance.connection.getAllGroups()
                     .then { list ->
                         if (list.any { it.equals(groupName, true) }) {
                             sender.send("${ChatColor.RED}この名前はすでに使用されています。")
                             throw Exception()
                         }
                     }
-                    .then(MaxPlayerCounter.getPlugin().connection.groups.insert(InsertOptions.Builder().addValue("id", groupName).build()))
+                    .then(MaxPlayerCounter.instance.connection.groups.insert(InsertOptions.Builder().addValue("id", groupName).build()))
                     .then { sender.send("${ChatColor.GREEN}グループ「${ChatColor.GOLD}$groupName${ChatColor.GREEN}」を作成しました。") }
                     .catch {
                         if (it::class.java == Exception::class.java) return@catch
@@ -217,15 +217,15 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                 if (!groupName.matches(MaxPlayerCounter.GROUP_PATTERN)) {
                     return sender.send("${ChatColor.RED}無効なグループ名です。")
                 }
-                MaxPlayerCounter.getPlugin().connection.getAllGroups()
+                MaxPlayerCounter.instance.connection.getAllGroups()
                     .then { list ->
                         if (!list.any { it == groupName }) {
                             sender.send("${ChatColor.RED}無効なグループ名です。")
                             throw Exception()
                         }
                     }
-                    .then(MaxPlayerCounter.getPlugin().connection.groups.delete(FindOptions.Builder().addWhere("id", groupName).build()))
-                    .then(MaxPlayerCounter.getPlugin().connection.serverGroup.delete(FindOptions.Builder().addWhere("group", groupName).build()))
+                    .then(MaxPlayerCounter.instance.connection.groups.delete(FindOptions.Builder().addWhere("id", groupName).build()))
+                    .then(MaxPlayerCounter.instance.connection.serverGroup.delete(FindOptions.Builder().addWhere("group", groupName).build()))
                     .then { sender.send("${ChatColor.GREEN}グループ「${ChatColor.GOLD}$groupName${ChatColor.GREEN}」を削除しました。") }
                     .catch {
                         if (it::class.java == Exception::class.java) return@catch
@@ -239,7 +239,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                 if (!groupName.matches(MaxPlayerCounter.GROUP_PATTERN)) {
                     return sender.send("${ChatColor.RED}無効なグループ名です。")
                 }
-                MaxPlayerCounter.getPlugin().connection.getAllGroups()
+                MaxPlayerCounter.instance.connection.getAllGroups()
                     .then { list ->
                         if (!list.any { it == groupName }) {
                             return@then sender.send("${ChatColor.RED}無効なグループ名です。")
@@ -254,7 +254,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                         when (args[2]) {
                             "add" -> {
                                 val server = args[3]
-                                MaxPlayerCounter.getPlugin().connection.serverGroup.upsert(
+                                MaxPlayerCounter.instance.connection.serverGroup.upsert(
                                     UpsertOptions.Builder()
                                         .addWhere("server", server)
                                         .addValue("group", groupName)
@@ -265,7 +265,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                             }
                             "remove" -> {
                                 val server = args[3]
-                                MaxPlayerCounter.getPlugin().connection.serverGroup.delete(
+                                MaxPlayerCounter.instance.connection.serverGroup.delete(
                                     FindOptions.Builder()
                                         .addWhere("group", groupName)
                                         .addWhere("server", server)
@@ -274,7 +274,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                                 sender.send("${ChatColor.GREEN}グループからサーバーを(そのグループに入っている場合は)除外しました。")
                             }
                             "info" -> {
-                                val servers = MaxPlayerCounter.getPlugin().connection.getServersByGroup(args[1]).complete()
+                                val servers = MaxPlayerCounter.instance.connection.getServersByGroup(args[1]).complete()
                                 sender.send("${ChatColor.AQUA}グループ: ${ChatColor.RESET}$groupName")
                                 sender.send("${ChatColor.RESET} ${ChatColor.RESET} ${ChatColor.AQUA}サーバー:")
                                 servers.forEach { server ->
@@ -317,7 +317,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
         if (groups == null || cachedGroups.ttl - System.currentTimeMillis() < 10000) { // update if cache is expired or expiring in under 10 seconds
             if (!updatingCache) {
                 updatingCache = true
-                MaxPlayerCounter.getPlugin().connection.getAllGroups().then {
+                MaxPlayerCounter.instance.connection.getAllGroups().then {
                     cachedGroups = DataCache(it, System.currentTimeMillis() + 1000 * 60)
                     updatingCache = false
                 }

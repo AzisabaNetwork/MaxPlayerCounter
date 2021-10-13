@@ -19,6 +19,7 @@ package xyz.acrylicstyle.maxPlayerCounter.sql
 import net.md_5.bungee.api.ProxyServer
 import net.md_5.bungee.api.config.ServerInfo
 import util.promise.rewrite.Promise
+import xyz.acrylicstyle.maxPlayerCounter.MaxPlayerCounter
 import xyz.acrylicstyle.sql.DataType
 import xyz.acrylicstyle.sql.Sequelize
 import xyz.acrylicstyle.sql.Table
@@ -28,6 +29,18 @@ import xyz.acrylicstyle.sql.options.InsertOptions
 import java.util.Properties
 
 class SQLConnection(host: String, name: String, user: String, password: String): Sequelize(host, name, user, password) {
+    companion object {
+        fun logSql(s: String, time: Long) {
+            if (time > 500) {
+                MaxPlayerCounter.instance.logger.warning("[MaxPlayerCounter] Executed SQL: $s ($time ms)")
+            } else {
+                if (false) {
+                    MaxPlayerCounter.instance.logger.info("[MaxPlayerCounter] Executed SQL: $s ($time ms)")
+                }
+            }
+        }
+    }
+    
     private val playerCountCache = mutableMapOf<String, Int>()
     private lateinit var players: Table
     lateinit var groups: Table
@@ -46,20 +59,20 @@ class SQLConnection(host: String, name: String, user: String, password: String):
                 TableDefinition.Builder("timestamp", DataType.BIGINT).setAllowNull(false).build(),
                 TableDefinition.Builder("playerCount", DataType.INT).setAllowNull(false).build(),
             ),
-        )
+        ).setupEventListener()
         groups = this.define(
             "groups",
             arrayOf(
                 TableDefinition.Builder("id", DataType.STRING).setAllowNull(false).setPrimaryKey(true).build(),
             ),
-        )
+        ).setupEventListener()
         serverGroup = this.define(
             "serverGroup",
             arrayOf(
                 TableDefinition.Builder("server", DataType.STRING).setAllowNull(false).setPrimaryKey(true).build(),
                 TableDefinition.Builder("group", DataType.STRING).setAllowNull(false).build(),
             ),
-        )
+        ).setupEventListener()
         records = this.define(
             "records",
             arrayOf(
@@ -68,8 +81,16 @@ class SQLConnection(host: String, name: String, user: String, password: String):
                 TableDefinition.Builder("timestamp", DataType.BIGINT).setAllowNull(false).build(),
                 TableDefinition.Builder("player_count", DataType.INT).setAllowNull(false).build(),
             ),
-        )
+        ).setupEventListener()
         this.sync()
+    }
+
+    private fun Table.setupEventListener(): Table {
+        eventEmitter.on(Table.Events.EXECUTED) {
+            val sql = it[0] as String
+            logSql(sql, it[1] as Long)
+        }
+        return this
     }
 
     private var lastUpdated = 0
