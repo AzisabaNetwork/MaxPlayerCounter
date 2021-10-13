@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.5.21"
+    kotlin("jvm") version "1.5.31"
     id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
@@ -15,8 +15,13 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("xyz.acrylicstyle:java-util-kotlin:0.15.4")
-    implementation("xyz.acrylicstyle:sequelize4j:0.4.6")
+    implementation("xyz.acrylicstyle.util:all:0.16.4")
+    implementation("xyz.acrylicstyle.util:yaml:0.16.4")
+    implementation("xyz.acrylicstyle.util:promise:0.16.4")
+    implementation("xyz.acrylicstyle.util:kotlin:0.16.4")
+    implementation("xyz.acrylicstyle:sequelize4j:0.6.0") {
+        exclude("xyz.acrylicstyle", "java-util-all")
+    }
     implementation("org.mariadb.jdbc:mariadb-java-client:2.7.3")
     compileOnly("net.md-5:bungeecord-api:1.17-R0.1-SNAPSHOT")
 }

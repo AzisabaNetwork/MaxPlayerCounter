@@ -25,7 +25,7 @@ import util.kt.promise.rewrite.catch
 import util.kt.promise.rewrite.component1
 import util.kt.promise.rewrite.component2
 import util.promise.rewrite.Promise
-import util.ref.DataCache
+import util.concurrent.ref.DataCache
 import xyz.acrylicstyle.maxPlayerCounter.util.Util
 import xyz.acrylicstyle.maxPlayerCounter.util.Util.convertMonth
 import xyz.acrylicstyle.maxPlayerCounter.util.Util.getBeginAndEndOfMonth
@@ -71,7 +71,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                 val cal = Calendar.getInstance()
                 cal.convertMonth(m)
                 val pair = cal.getBeginAndEndOfMonth()
-                Promise.create<Unit> { (resolve, _) ->
+                Promise.create<Unit>("MaxPlayerCounter Thread Pool #%d") { (resolve, _) ->
                     val s = MaxPlayerCounter.getPlugin().connection.connection.prepareStatement("SELECT * FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ?")
                     s.setLong(1, pair.first)
                     s.setLong(2, pair.second)
@@ -158,9 +158,9 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                         val map = mutableMapOf<String, MutableList<Pair<Long, Int>>>()
                         while (result.next()) {
                             val server = result.getString("server")
-                            val first = result.getLong("timestamp")
-                            val second = result.getInt("playerCount")
-                            map.getOrPut(server) { mutableListOf() }.add(first to second)
+                            val timestamp = result.getLong("timestamp")
+                            val playerCount = result.getInt("playerCount")
+                            map.getOrPut(server) { mutableListOf() }.add(timestamp to playerCount)
                         }
                         val timestamps = map.values.flatMap { l -> l.map { p -> p.first } }.distinct()
                         var epicTS = 0L
@@ -276,7 +276,7 @@ object MaxPlayerCounterCommand: Command("maxplayercounter", "maxplayercounter.co
                             "info" -> {
                                 val servers = MaxPlayerCounter.getPlugin().connection.getServersByGroup(args[1]).complete()
                                 sender.send("${ChatColor.AQUA}グループ: ${ChatColor.RESET}$groupName")
-                                sender.send("- ${ChatColor.AQUA}サーバー:")
+                                sender.send("${ChatColor.RESET} ${ChatColor.RESET} ${ChatColor.AQUA}サーバー:")
                                 servers.forEach { server ->
                                     sender.send("   - ${ChatColor.GREEN}${server.name}")
                                 }

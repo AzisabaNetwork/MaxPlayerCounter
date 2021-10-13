@@ -32,6 +32,7 @@ class SQLConnection(host: String, name: String, user: String, password: String):
     private lateinit var players: Table
     lateinit var groups: Table
     lateinit var serverGroup: Table
+    lateinit var records: Table
 
     fun isConnected() = connection != null && !connection.isClosed
 
@@ -50,21 +51,30 @@ class SQLConnection(host: String, name: String, user: String, password: String):
             "groups",
             arrayOf(
                 TableDefinition.Builder("id", DataType.STRING).setAllowNull(false).setPrimaryKey(true).build(),
-            )
+            ),
         )
         serverGroup = this.define(
             "serverGroup",
             arrayOf(
                 TableDefinition.Builder("server", DataType.STRING).setAllowNull(false).setPrimaryKey(true).build(),
                 TableDefinition.Builder("group", DataType.STRING).setAllowNull(false).build(),
-            )
+            ),
+        )
+        records = this.define(
+            "records",
+            arrayOf(
+                TableDefinition.Builder("date", DataType.DATE).setAllowNull(false).setPrimaryKey(true).build(),
+                TableDefinition.Builder("server", DataType.STRING).setAllowNull(false).build(),
+                TableDefinition.Builder("timestamp", DataType.BIGINT).setAllowNull(false).build(),
+                TableDefinition.Builder("player_count", DataType.INT).setAllowNull(false).build(),
+            ),
         )
         this.sync()
     }
 
     private var lastUpdated = 0
 
-    fun updatePlayerCount(): Promise<Unit> = Promise.create { context ->
+    fun updatePlayerCount(): Promise<Unit> = Promise.create("MaxPlayerCounter Thread Pool #%d") { context ->
         if (isConnected() && System.currentTimeMillis() - lastUpdated > 950) {
             val ts = System.currentTimeMillis()
             if (playerCountCache.isEmpty()) {
