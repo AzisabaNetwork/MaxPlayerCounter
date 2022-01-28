@@ -14,23 +14,30 @@
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
  */
 
-package xyz.acrylicstyle.maxPlayerCounter
+package net.azisaba.maxPlayerCounter
 
-import net.md_5.bungee.api.ProxyServer
-import net.md_5.bungee.api.plugin.Plugin
+import com.google.inject.Inject
+import com.velocitypowered.api.event.Subscribe
+import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
+import com.velocitypowered.api.plugin.Plugin
+import com.velocitypowered.api.plugin.annotation.DataDirectory
+import com.velocitypowered.api.proxy.ProxyServer
 import util.base.Bytes
-import xyz.acrylicstyle.maxPlayerCounter.listener.JoinQuitEventsListener
-import xyz.acrylicstyle.maxPlayerCounter.sql.SQLConnection
-import xyz.acrylicstyle.maxPlayerCounter.util.Util
-import xyz.acrylicstyle.maxPlayerCounter.util.Util.getBeginAndEndOfMonth
-import java.io.File
-import java.sql.SQLException
+import net.azisaba.maxPlayerCounter.sql.SQLConnection
+import net.azisaba.maxPlayerCounter.util.Util
+import net.azisaba.maxPlayerCounter.util.Util.getBeginAndEndOfMonth
+import org.slf4j.Logger
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Calendar
 import java.util.Properties
 import java.util.Timer
 import java.util.TimerTask
 
-class MaxPlayerCounter: Plugin() {
+@Suppress("LeakingThis")
+@Plugin(id = "maxplayercounter", name = "MaxPlayerCounter")
+open class MaxPlayerCounter @Inject constructor(val server: ProxyServer, val logger: Logger, @DataDirectory val dataFolder: Path) {
     companion object {
         val GROUP_PATTERN = "^[a-zA-Z0-9+_\\-]{1,32}$".toRegex()
 
@@ -45,14 +52,15 @@ class MaxPlayerCounter: Plugin() {
 
     lateinit var connection: SQLConnection
 
-    override fun onEnable() {
-        dataFolder.mkdir()
-        val file = File(dataFolder, "config.yml")
-        if (!file.exists()) {
+    @Subscribe
+    fun onProxyInitialization(e: ProxyInitializeEvent) {
+        Files.createDirectory(dataFolder)
+        val configPath = dataFolder.resolve("config.yml")
+        if (!Files.exists(configPath)) {
             logger.info("Copying default config.yml")
             val input = MaxPlayerCounter::class.java.getResourceAsStream("/config.yml")
                 ?: throw AssertionError("Could not find config.yml in jar file")
-            Bytes.copy(input, file)
+            Bytes.copy(input, configPath.toFile())
         }
         logger.info("Connecting to database...")
         connection = SQLConnection(
@@ -69,15 +77,13 @@ class MaxPlayerCounter: Plugin() {
         timer.scheduleAtFixedRate(object: TimerTask() {
             override fun run() {
                 try {
-                    val statement = connection.connection.createStatement()
-                    statement.execute("SELECT 1;")
-                    statement.close()
-                } catch (e: SQLException) {
-                    logger.warning("Could not execute keep-alive ping")
+                    connection.updatePlayerCountAll()
+                } catch (e: Exception) {
+                    logger.warn("Could not record player count")
                     throw e
                 }
             }
-        }, MaxPlayerCounterConfig.database.keepAlive * 1000L, MaxPlayerCounterConfig.database.keepAlive * 1000L)
+        }, 60000L, 60000L)
         timer.schedule(object: TimerTask() {
             override fun run() {
                 val c = Calendar.getInstance()
@@ -95,11 +101,11 @@ class MaxPlayerCounter: Plugin() {
                 logger.info("Removed $affected rows.")
             }
         }, 5000L)
-        proxy.pluginManager.registerCommand(this, MaxPlayerCounterCommand)
-        proxy.pluginManager.registerListener(this, JoinQuitEventsListener)
+        server.commandManager.register(MaxPlayerCounterCommand.createCommand())
     }
 
-    override fun onDisable() {
+    @Subscribe
+    fun onProxyShutdown(e: ProxyShutdownEvent) {
         timer.cancel()
         if (connection.isConnected()) {
             logger.info("Closing database connection")

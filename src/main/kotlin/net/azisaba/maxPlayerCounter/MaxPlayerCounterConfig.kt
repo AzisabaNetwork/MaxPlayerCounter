@@ -14,7 +14,7 @@
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
  */
 
-package xyz.acrylicstyle.maxPlayerCounter
+package net.azisaba.maxPlayerCounter
 
 import util.yaml.YamlConfiguration
 import util.yaml.YamlObject

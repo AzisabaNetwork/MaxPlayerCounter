@@ -14,12 +14,11 @@
  * <http://www.gnu.org/licenses/gpl-3.0.html>.
  */
 
-package xyz.acrylicstyle.maxPlayerCounter.sql
+package net.azisaba.maxPlayerCounter.sql
 
-import net.md_5.bungee.api.ProxyServer
-import net.md_5.bungee.api.config.ServerInfo
+import com.velocitypowered.api.proxy.server.RegisteredServer
 import util.promise.rewrite.Promise
-import xyz.acrylicstyle.maxPlayerCounter.MaxPlayerCounter
+import net.azisaba.maxPlayerCounter.MaxPlayerCounter
 import xyz.acrylicstyle.sql.DataType
 import xyz.acrylicstyle.sql.Sequelize
 import xyz.acrylicstyle.sql.Table
@@ -32,7 +31,7 @@ class SQLConnection(host: String, name: String, user: String, password: String):
     companion object {
         fun logSql(s: String, time: Long) {
             if (time > 500) {
-                MaxPlayerCounter.instance.logger.warning("[MaxPlayerCounter] Executed SQL: $s ($time ms)")
+                MaxPlayerCounter.instance.logger.warn("[MaxPlayerCounter] Executed SQL: $s ($time ms)")
             } else {
                 if (false) {
                     MaxPlayerCounter.instance.logger.info("[MaxPlayerCounter] Executed SQL: $s ($time ms)")
@@ -40,8 +39,7 @@ class SQLConnection(host: String, name: String, user: String, password: String):
             }
         }
     }
-    
-    private val playerCountCache = mutableMapOf<String, Int>()
+
     private lateinit var players: Table
     lateinit var groups: Table
     lateinit var serverGroup: Table
@@ -93,54 +91,25 @@ class SQLConnection(host: String, name: String, user: String, password: String):
         return this
     }
 
-    private var lastUpdated = 0
-
-    fun updatePlayerCount(): Promise<Unit> = Promise.create("MaxPlayerCounter Thread Pool #%d") { context ->
-        if (isConnected() && System.currentTimeMillis() - lastUpdated > 950) {
+    fun updatePlayerCountAll() = Promise.create<Unit> { context ->
+        if (isConnected()) {
             val ts = System.currentTimeMillis()
-            if (playerCountCache.isEmpty()) {
-                Promise.allUntyped(*ProxyServer.getInstance().servers.values.map { server ->
-                    players.insert(
-                        InsertOptions.Builder()
-                            .addValue("server", server.name)
-                            .addValue("timestamp", ts)
-                            .addValue("playerCount", server.players.size)
-                            .build()
-                    )
-                }.toTypedArray())
-            } else {
-                Promise.allUntyped(
-                    *getModifiedKeysFromMap(
-                        playerCountCache,
-                        ProxyServer.getInstance().servers.mapValues { it.value.players.size },
-                    ).map { n ->
-                        players.insert(
-                            InsertOptions.Builder()
-                                .addValue("server", n)
-                                .addValue("timestamp", ts)
-                                .addValue("playerCount", ProxyServer.getInstance().getServerInfo(n)?.players?.size ?: 0)
-                                .build()
-                        )
-                    }.toTypedArray()
+            Promise.allUntyped(*MaxPlayerCounter.instance.server.allServers.map { server ->
+                players.insert(
+                    InsertOptions.Builder()
+                        .addValue("server", server.serverInfo.name)
+                        .addValue("timestamp", ts)
+                        .addValue("playerCount", server.playersConnected.size)
+                        .build()
                 )
-            }
-            playerCountCache.clear()
-            playerCountCache.putAll(ProxyServer.getInstance().servers.mapValues { it.value.players.size })
+            }.toTypedArray())
         }
         context.resolve()
     }
 
-    private fun <K, V> getModifiedKeysFromMap(map: Map<K, V>, map2: Map<K, V>): List<K> {
-        val list = mutableListOf<K>()
-        map.forEach { (key, value) ->
-            if (map2[key] != value) list.add(key)
-        }
-        return list
-    }
-
-    fun getServersByGroup(groupId: String): Promise<List<ServerInfo>> =
+    fun getServersByGroup(groupId: String): Promise<List<RegisteredServer>> =
         serverGroup.findAll(FindOptions.Builder().addWhere("group", groupId).build())
-            .then { it.mapNotNull { td -> ProxyServer.getInstance().getServerInfo(td.getString("server")) } }
+            .then { it.mapNotNull { td -> MaxPlayerCounter.instance.server.getServer(td.getString("server")).orElse(null) } }
 
     fun getAllServerGroups(): Promise<Map<String, List<String>>> =
         serverGroup.findAll(FindOptions.ALL).then {

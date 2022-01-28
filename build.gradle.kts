@@ -1,29 +1,31 @@
 plugins {
-    kotlin("jvm") version "1.5.31"
+    kotlin("jvm") version "1.6.10"
     id("com.github.johnrengelman.shadow") version "6.0.0"
 }
 
-group = "xyz.acrylicstyle"
-version = "0.0.5"
+group = "net.azisaba"
+version = "1.0.0"
 
 repositories {
-    mavenLocal()
     mavenCentral()
     maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") }
-    maven { url = uri("https://repo2.acrylicstyle.xyz") }
+    maven { url = uri("https://repo.acrylicstyle.xyz/repository/maven-public/") }
+    maven { url = uri("https://nexus.velocitypowered.com/repository/maven-public/") }
 }
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("xyz.acrylicstyle.util:all:0.16.4")
-    implementation("xyz.acrylicstyle.util:yaml:0.16.4")
-    implementation("xyz.acrylicstyle.util:promise:0.16.4")
-    implementation("xyz.acrylicstyle.util:kotlin:0.16.4")
-    implementation("xyz.acrylicstyle:sequelize4j:0.6.1") {
-        exclude("xyz.acrylicstyle", "java-util-all")
+    //implementation("xyz.acrylicstyle.util:all:0.16.5")
+    implementation("xyz.acrylicstyle.util:yaml:0.16.5")
+    implementation("xyz.acrylicstyle.util:promise:0.16.5")
+    implementation("xyz.acrylicstyle.util:kotlin:0.16.5")
+    implementation("xyz.acrylicstyle:sequelize4j:0.6.2") {
+        exclude("xyz.acrylicstyle.util", "all")
     }
     implementation("org.mariadb.jdbc:mariadb-java-client:2.7.3")
-    compileOnly("net.md-5:bungeecord-api:1.17-R0.1-SNAPSHOT")
+    compileOnly("net.azisaba.library:velocity:1.1.0-SNAPSHOT")
+    compileOnly("com.velocitypowered:velocity-api:3.0.1")
+    annotationProcessor("com.velocitypowered:velocity-api:3.0.1")
 }
 
 tasks {
@@ -31,11 +33,11 @@ tasks {
     compileTestKotlin { kotlinOptions.jvmTarget = "1.8" }
 
     shadowJar {
-        relocate("kotlin", "xyz.acrylicstyle.maxPlayerCounter.libs.kotlin")
-        relocate("util", "xyz.acrylicstyle.maxPlayerCounter.libs.util") { exclude("util.agent.JavaAgents") }
-        relocate("xyz.acrylicstyle.mcutil", "xyz.acrylicstyle.maxPlayerCounter.libs.xyz.acrylicstyle.mcutil")
-        relocate("xyz.acrylicstyle.sql", "xyz.acrylicstyle.maxPlayerCounter.libs.xyz.acrylicstyle.sql")
-        relocate("org.mariadb", "xyz.acrylicstyle.maxPlayerCounter.libs.org.mariadb")
+        relocate("kotlin", "net.azisabamaxPlayerCounter.libs.kotlin")
+        relocate("util", "net.azisabamaxPlayerCounter.libs.util") { exclude("util.agent.JavaAgents") }
+        relocate("xyz.acrylicstyle.mcutil", "net.azisabamaxPlayerCounter.libs.net.azisabamcutil")
+        relocate("xyz.acrylicstyle.sql", "net.azisabamaxPlayerCounter.libs.net.azisabasql")
+        relocate("org.mariadb", "net.azisabamaxPlayerCounter.libs.org.mariadb")
 
         minimize()
     }
