@@ -55,7 +55,9 @@ open class MaxPlayerCounter @Inject constructor(val server: ProxyServer, val log
 
     @Subscribe
     fun onProxyInitialization(e: ProxyInitializeEvent) {
-        Files.createDirectory(dataFolder)
+        if (!Files.exists(dataFolder)) {
+            Files.createDirectory(dataFolder)
+        }
         val configPath = dataFolder.resolve("config.yml")
         if (!Files.exists(configPath)) {
             logger.info("Copying default config.yml")
