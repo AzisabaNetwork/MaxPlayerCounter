@@ -96,6 +96,7 @@ class SQLConnection(host: String, name: String, user: String, password: String):
         if (isConnected()) {
             val ts = System.currentTimeMillis()
             Promise.allUntyped(*MaxPlayerCounter.instance.server.allServers.map { server ->
+                //println("${server.serverInfo.name}: ${server.playersConnected.size} @ $ts")
                 players.insert(
                     InsertOptions.Builder()
                         .addValue("server", server.serverInfo.name)

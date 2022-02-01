@@ -83,7 +83,7 @@ open class MaxPlayerCounter @Inject constructor(val server: ProxyServer, val log
                     connection.updatePlayerCountAll()
                 } catch (e: Exception) {
                     logger.warn("Could not record player count")
-                    throw e
+                    e.printStackTrace()
                 }
             }
         }, 60000L, 60000L)
