@@ -33,12 +33,9 @@ tasks {
     compileTestKotlin { kotlinOptions.jvmTarget = "1.8" }
 
     shadowJar {
-        relocate("kotlin", "net.azisabamaxPlayerCounter.libs.kotlin")
-        relocate("util", "net.azisabamaxPlayerCounter.libs.util") { exclude("util.agent.JavaAgents") }
-        relocate("xyz.acrylicstyle.mcutil", "net.azisaba.maxPlayerCounter.libs.net.azisabamcutil")
-        relocate("xyz.acrylicstyle.sql", "net.azisaba.maxPlayerCounter.libs.net.azisabasql")
+        relocate("kotlin", "net.azisaba.maxPlayerCounter.libs.kotlin")
+        relocate("util", "net.azisaba.maxPlayerCounter.libs.util") { exclude("util.agent.JavaAgents") }
+        relocate("xyz.acrylicstyle.sql", "net.azisaba.maxPlayerCounter.libs.xyz.acrylicstyle.sql")
         relocate("org.mariadb", "net.azisaba.maxPlayerCounter.libs.org.mariadb")
-
-        minimize()
     }
 }

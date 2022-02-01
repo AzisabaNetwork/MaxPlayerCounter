@@ -17,14 +17,15 @@
 package net.azisaba.maxPlayerCounter.sql
 
 import com.velocitypowered.api.proxy.server.RegisteredServer
-import util.promise.rewrite.Promise
 import net.azisaba.maxPlayerCounter.MaxPlayerCounter
+import util.promise.rewrite.Promise
 import xyz.acrylicstyle.sql.DataType
 import xyz.acrylicstyle.sql.Sequelize
 import xyz.acrylicstyle.sql.Table
 import xyz.acrylicstyle.sql.TableDefinition
 import xyz.acrylicstyle.sql.options.FindOptions
 import xyz.acrylicstyle.sql.options.InsertOptions
+import java.sql.Driver
 import java.util.Properties
 
 class SQLConnection(host: String, name: String, user: String, password: String): Sequelize(host, name, user, password) {
@@ -49,7 +50,7 @@ class SQLConnection(host: String, name: String, user: String, password: String):
 
     fun connect(properties: Properties) {
         if (isConnected()) return
-        this.authenticate(getMariaDBDriver(), properties)
+        this.authenticate(Class.forName("net.azisaba.maxPlayerCounter.libs.org.mariadb.jdbc.Driver").newInstance() as Driver, properties)
         players = this.define(
             "players",
             arrayOf(
