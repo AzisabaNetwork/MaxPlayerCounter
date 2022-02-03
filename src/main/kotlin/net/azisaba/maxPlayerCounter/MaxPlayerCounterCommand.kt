@@ -194,8 +194,7 @@ object MaxPlayerCounterCommand: AbstractBrigadierCommand() {
         MaxPlayerCounter.instance.connection.groups.findOne(FindOptions.Builder().addWhere("id", server).setLimit(1).build())
             .then {
                 if (it == null) {
-                    val registeredServer = MaxPlayerCounter.instance.server.allServers.find { server -> server.serverInfo.name.equals(server) }?.serverInfo?.name
-                        ?: throw Exception()
+                    val registeredServer = MaxPlayerCounter.instance.server.getServer(server)?.orElse(null)?.serverInfo?.name ?: throw Exception()
                     val s = MaxPlayerCounter.instance.connection.connection.prepareStatement("SELECT `timestamp`, `playerCount` FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ? AND `server` = ?")
                     s.setLong(1, pair.first)
                     s.setLong(2, pair.second)
@@ -262,7 +261,10 @@ object MaxPlayerCounterCommand: AbstractBrigadierCommand() {
                     .append(Component.text(Util.formatDateTime(p.first)).color(NamedTextColor.AQUA)))
             }
             .catch {
-                if (it::class.java == Exception::class.java) return@catch
+                if (it::class.java == Exception::class.java) {
+                    source.sendMessage(Component.text("サーバーが見つかりません。").color(NamedTextColor.RED))
+                    return@catch
+                }
                 it.printStackTrace()
             }
         return 0
