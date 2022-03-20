@@ -31,7 +31,7 @@ object Util {
         return "0".repeat(length - s.length) + s
     }
 
-    fun Calendar.formatDateTime(): String {
+    private fun Calendar.formatDateTime(): String {
         val year = zero(4, this[Calendar.YEAR])
         val month = zero(2, this[Calendar.MONTH] + 1)
         val day = zero(2, this[Calendar.DAY_OF_MONTH])
@@ -60,7 +60,7 @@ object Util {
         return first to second
     }
 
-    fun getCurrentMonth() = Calendar.getInstance()[Calendar.MONTH]
+    private fun getCurrentMonth() = Calendar.getInstance()[Calendar.MONTH]
 
     fun Calendar.convertMonth(month: Int) {
         if (month < 0 || month > 11) error("Invalid month (must be 0-11 inclusive): $month")

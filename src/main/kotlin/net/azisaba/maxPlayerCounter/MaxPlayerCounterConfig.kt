@@ -41,6 +41,6 @@ object MaxPlayerCounterConfig {
         val password = obj.getString("password") ?: "maxplayercounter"
         val verifyServerCertificate = obj.getBoolean("verifyServerCertificate", false)
         val useSSL = obj.getBoolean("useSSL", true)
-        val keepAlive = obj.getInt("keepAlive", 300)
+        //val keepAlive = obj.getInt("keepAlive", 300)
     }
 }

@@ -18,6 +18,7 @@ package net.azisaba.maxPlayerCounter.sql
 
 import com.velocitypowered.api.proxy.server.RegisteredServer
 import net.azisaba.maxPlayerCounter.MaxPlayerCounter
+import net.azisaba.velocityredisbridge.VelocityRedisBridge
 import util.promise.rewrite.Promise
 import xyz.acrylicstyle.sql.DataType
 import xyz.acrylicstyle.sql.Sequelize
@@ -34,17 +35,16 @@ class SQLConnection(host: String, name: String, user: String, password: String):
             if (time > 500) {
                 MaxPlayerCounter.instance.logger.warn("[MaxPlayerCounter] Executed SQL: $s ($time ms)")
             } else {
-                if (false) {
-                    MaxPlayerCounter.instance.logger.info("[MaxPlayerCounter] Executed SQL: $s ($time ms)")
-                }
+                //MaxPlayerCounter.instance.logger.info("[MaxPlayerCounter] Executed SQL: $s ($time ms)")
             }
         }
     }
 
+    private val lastKnownServers = mutableListOf<String>()
     private lateinit var players: Table
     lateinit var groups: Table
     lateinit var serverGroup: Table
-    lateinit var records: Table
+    private lateinit var records: Table
 
     fun isConnected() = connection != null && !connection.isClosed
 
@@ -95,13 +95,20 @@ class SQLConnection(host: String, name: String, user: String, password: String):
     fun updatePlayerCountAll() = Promise.create<Unit> { context ->
         if (isConnected()) {
             val ts = System.currentTimeMillis()
-            Promise.allUntyped(*MaxPlayerCounter.instance.server.allServers.map { server ->
-                //println("${server.serverInfo.name}: ${server.playersConnected.size} @ $ts")
+            val servers = mutableMapOf<String, Int>()
+            lastKnownServers.forEach { servers[it] = 0 }
+            lastKnownServers.clear()
+            VelocityRedisBridge.getApi().allPlayerInfo.forEach {
+                servers[it.childServer] = (servers[it.childServer] ?: 0) + 1
+            }
+            lastKnownServers.addAll(servers.keys)
+            Promise.allUntyped(*servers.map { (server, count) ->
+                //println("$server: $count @ $ts")
                 players.insert(
                     InsertOptions.Builder()
-                        .addValue("server", server.serverInfo.name)
+                        .addValue("server", server)
                         .addValue("timestamp", ts)
-                        .addValue("playerCount", server.playersConnected.size)
+                        .addValue("playerCount", count)
                         .build()
                 )
             }.toTypedArray())

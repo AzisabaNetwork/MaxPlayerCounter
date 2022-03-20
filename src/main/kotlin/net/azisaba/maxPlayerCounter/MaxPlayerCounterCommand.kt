@@ -191,10 +191,12 @@ object MaxPlayerCounterCommand: AbstractBrigadierCommand() {
         val cal = Calendar.getInstance()
         cal.convertMonth(m)
         val pair = cal.getBeginAndEndOfMonth()
+        source.sendActionBar(Component.text("グループを取得中...", NamedTextColor.GOLD))
         MaxPlayerCounter.instance.connection.groups.findOne(FindOptions.Builder().addWhere("id", server).setLimit(1).build())
             .then {
                 if (it == null) {
                     val registeredServer = MaxPlayerCounter.instance.server.getServer(server)?.orElse(null)?.serverInfo?.name ?: throw Exception()
+                    source.sendActionBar(Component.text("データを集計中...", NamedTextColor.GOLD))
                     val s = MaxPlayerCounter.instance.connection.connection.prepareStatement("SELECT `timestamp`, `playerCount` FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ? AND `server` = ?")
                     s.setLong(1, pair.first)
                     s.setLong(2, pair.second)
@@ -217,6 +219,7 @@ object MaxPlayerCounterCommand: AbstractBrigadierCommand() {
                     if (a != "") a += " OR "
                     a += "`server` = ?"
                 }
+                source.sendActionBar(Component.text("データを集計中...", NamedTextColor.GOLD))
                 val s = MaxPlayerCounter.instance.connection.connection.prepareStatement("SELECT * FROM `players` WHERE `timestamp` >= ? AND `timestamp` <= ? AND ($a)")
                 s.setLong(1, pair.first)
                 s.setLong(2, pair.second)
@@ -231,6 +234,7 @@ object MaxPlayerCounterCommand: AbstractBrigadierCommand() {
                     val playerCount = result.getInt("playerCount")
                     map.getOrPut(serverName) { mutableListOf() }.add(timestamp to playerCount)
                 }
+                source.sendActionBar(Component.text("集計したデータを計算中...", NamedTextColor.GOLD))
                 val timestamps = map.values.flatMap { l -> l.map { p -> p.first } }.distinct()
                 var epicTS = 0L
                 var epicPC = 0

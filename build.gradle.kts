@@ -4,13 +4,14 @@ plugins {
 }
 
 group = "net.azisaba"
-version = "1.0.0"
+version = "1.1.0"
 
 repositories {
     mavenCentral()
     maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") }
     maven { url = uri("https://repo.acrylicstyle.xyz/repository/maven-public/") }
     maven { url = uri("https://nexus.velocitypowered.com/repository/maven-public/") }
+    maven { url = uri("https://jitpack.io/") }
 }
 
 dependencies {
@@ -25,6 +26,7 @@ dependencies {
     implementation("org.mariadb.jdbc:mariadb-java-client:2.7.3")
     compileOnly("net.azisaba.library:velocity:1.1.0-SNAPSHOT")
     compileOnly("com.velocitypowered:velocity-api:3.0.1")
+    compileOnly("com.github.AzisabaNetwork:VelocityRedisBridge:1.0.1")
     annotationProcessor("com.velocitypowered:velocity-api:3.0.1")
 }
 
